@@ -1,4 +1,4 @@
-#BlockMultipliesPlugin
+# BlockMultipliesPlugin
 プレイヤーがブロックを殴ると、そのプレイヤーの周囲にそのブロックがランダムで出現するプラグイン。
 
 ## 動作環境
