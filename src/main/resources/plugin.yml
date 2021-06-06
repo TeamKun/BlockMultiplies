@@ -1,0 +1,16 @@
+name: Blockmultiplies
+version: ${project.version}
+main: net.kunmc.lab.blockmultiplies.Blockmultiplies
+api-version: 1.16
+authors: [ CANIS ]
+description: ブロックを掘ろうとするとそのブロックが周囲で増殖するプラグイン
+depend: [ProtocolLib]
+
+commands:
+  bm:
+    description: ブロックを殴ると増殖する
+    usage: |-
+      /<command> rndRange [number] - 生成範囲を1以上の整数で設定
+      /<command> possibility [number] - 生成確率を0以上100以下の整数で設定
+      /<command> config - 生成範囲、生成確率の設定値を出力
+    permission: op
