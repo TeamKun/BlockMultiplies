@@ -13,14 +13,12 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 public final class Blockmultiplies extends JavaPlugin {
 
     public static Blockmultiplies plugin;
+    HashMap<UUID, Boolean> playerDigging = new HashMap<>();
 
     @Override
     public void onEnable() {
@@ -32,29 +30,44 @@ public final class Blockmultiplies extends JavaPlugin {
 
         Random rnd = new Random();
 
-        // Add a listener for client arm_animation packet
+        // ProtocolLibraryでパケットを取得する。
+        // Client.BLOCK_DIGパケットで、破壊開始（START_DESTROY_BLOCK）を検出し、MapにUUIDとBoolean.TRUEを保存。
+        // Client.BLOCK_DIGパケットで、破壊開始以外を検出し、MapからUUIDのキーを削除。
+        // Client.ARM_ANIMATIONパケットで、腕動作を検出する。UUIDでMapを検索し、Boolean.TRUEであれば、ブロック生成ロジックを起動する。
+
         ProtocolManager protocolManager = ProtocolLibrary.getProtocolManager();
+        protocolManager.addPacketListener(new PacketAdapter(this, PacketType.Play.Client.BLOCK_DIG) {
+            @Override
+            public void onPacketReceiving(PacketEvent event) {
+                String digName = event.getPacket().getPlayerDigTypes().getValues().get(0).name();
+                if (digName.equals("START_DESTROY_BLOCK")) {
+                    playerDigging.put(event.getPlayer().getUniqueId(), Boolean.TRUE);
+                } else {
+                    playerDigging.remove(event.getPlayer().getUniqueId());
+                }
+            }
+        });
+
+        //
         protocolManager.addPacketListener(new PacketAdapter(this, PacketType.Play.Client.ARM_ANIMATION) {
             @Override
             public void onPacketReceiving(PacketEvent event) {
 
-                // When receiving packet and the player's target is not air, set block around it
+                // ブロックがエアー以外、および、そのユーザーのUUIDに破壊開始フラグが立っているかを確認。
                 Material blockType = event.getPlayer().getTargetBlock(null, 4).getType();
-                if (blockType != Material.AIR) {
+                if ((blockType != Material.AIR) && (playerDigging.getOrDefault(event.getPlayer().getUniqueId(), Boolean.FALSE))) {
 
-                    // Random cancellation by possibility setting
+                    // 乱数を生成し、生成確率に応じてその後の処理を実行するかを決定。
                     if (rnd.nextInt(99) + 1 <= Config.possibility()) {
 
-                        // Get the player's location
+                        // プレイヤーの位置に、xyz各軸に対し、絶対値が生成範囲内の正負の乱数を加算する。
                         Location loc = event.getPlayer().getLocation();
-
-                        // Add plus or minus randomised number in rndRange to the location
                         Integer range = Config.rndRange();
                         loc.add(rnd.nextInt(range * 2) - range, rnd.nextInt(range * 2) - range, rnd.nextInt(range * 2) - range);
                         new BukkitRunnable() {
                             public void run() {
 
-                                // Set the block of the same type as the target block at the added location
+                                // 対象位置に破壊中のブロックと同じブロックを設置する。
                                 loc.getBlock().setType(blockType);
                             }
                         }.runTask(plugin);
